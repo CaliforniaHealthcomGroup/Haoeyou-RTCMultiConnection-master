@@ -1,0 +1,894 @@
+<!-- Demo version: 2017.08.10 -->
+
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <title>好医友远程医疗</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <link rel="shortcut icon" href="/image/favicon.ico">
+  <link rel="stylesheet" href="/css/jquery-ui.min.css">
+  <script src="/javascripts/jquery.min.js"></script>
+  <script src="/javascripts/jquery-ui.min.js"></script>
+  <script src="/javascripts/RecordRTC.min.js"></script>
+  <script src="/javascripts/js.cookie.js"></script>
+  <link rel="stylesheet" href="/css/font-awesome.min.css">
+  <style type="text/css">
+    body {margin: 0; position: fixed; width: 100%; height: 100%; background-color: black;}
+    #navigationContainer {position: fixed; width: 100%; height: 60px; top: 0; left: 0; right: 0; background-color: transparent; z-index: 999}
+    #navigationBar {width: 95%; height: 100%; padding: 0 2.5% 0 2.5%; margin: 0; background-color: rgba(88, 88, 88, 0.65); display: block;}
+    /*#navigationContainer:hover #navigationBar{display: block;}*/
+    #navigationBar input {height: 50px; float: right; padding: 5px; display: block; outline: none;}
+    #navigationBar input:hover {background-color: #333;}
+    #navigationBar i {font-size:42px; float: right; margin: 10px; display: block; outline: none; color:white; cursor: pointer;}
+    #navigationBar i:hover {font-size:42px; float: right; margin: 10px; display: block; outline: none; color:black;}
+    #navigationBar img {height: 100%;}
+    #container {position: relative; width:100%; height: 100%;}
+
+    #primaryVideoContainer {position: relative; width:100%; height: 100%; float: left;}
+    #primaryVideoContainer div {position: absolute; width: 100%; height: 100%; margin: 0; right:0; bottom:0; overflow: hidden;}
+    #primaryVideoContainer div video {position: relative; width: 100%; height: 100%; object-fit: cover;}
+    #localVideoContainer {z-index: 99; height: 21vh !important;}
+    #localVideoContainer div {position: relative; width:28vh; height: 21vh; overflow:hidden; float:right; z-index: 99; /*width: 28vh;*/ }
+    #remoteVideoContainer {position: fixed; width: 100%; height: 21vh; bottom: 0; left: 0; right: 0; background-color: transparent; z-index: 100}
+    #remoteVideoContainer div {position: relative; overflow:hidden; float:left; width: 28vh; height: 21vh;}
+    #remoteVideoContainer div video {width: 100%; height: 100%; object-fit: cover;}
+    .dialog-container {height:350px; overflow:auto}
+  </style>
+</head>
+<body>
+
+  <div id="container">
+    <div id="primaryVideoContainer">
+      <div id="mainScreen"></div>
+      <div id="localVideoContainer"></div>
+    </div>
+    <div id="remoteVideoContainer"></div>
+
+
+  </div>
+
+  <div id="navigationContainer">
+    <div id="navigationBar">
+      <img id="logo" >
+      <i class="fa fa-cog" id="btnConfig"></i>
+      <i class="fa fa-play-circle" id="btnRecording"></i>
+      <i class="fa fa-cloud" id="btnFileDownload"></i>
+      <i class="fa fa-snapchat" id="btnChat"></i>
+      <i class="fa fa-share-square-o" id="btnShareScreen"></i>
+    </div>
+  </div>
+
+  <a id="downloadLink"></a>
+
+  <div id="settings-container" class="dialog-container" title="Settings">
+    <label style="width: 150px;">Microphone</label>:<br>
+    <select id="audioSelect" style="width: 100%"></select>
+    <label style="width: 150px;">Camera</label>:<br>
+    <select id="videoSelect" style="width: 100%"></select>
+  </div>
+
+
+  <div id="chat-container" class="dialog-container" title="Chat">
+    <div class="chat-output"></div>
+    <input id="input-text-chat" placeholder="Enter Text Chat" disabled>
+  </div>
+
+  <div id="file-container" class="dialog-container" title="File">
+    <button id="share-file"><i class="fa fa-cloud-upload"></i> Select File To Share</button>
+  </div>
+
+  <div id="chrome-extension-install-warning-container" class="dialog-container" title="Chrome Extension">
+    <p>Please click <a href="https://chrome.google.com/webstore/detail/screen-capturing/ajhifddimkapgcifgcodmmfdlknahffk">here</a> to install Chrome Extension for screen share.</p>
+    <p>Or</p>
+    <p><a href="extension/remoteScreenShare.zip">Download</a> extension. Install into your Chrome manually through developer mode.</p>
+  </div>
+
+<script src="/dist/RTCMultiConnection.js"></script>
+<!--<script src="/dev/adapter.js"></script>-->
+<script src="/socket.io/socket.io.js"></script>
+  <script src="/dev/FileBufferReader.js"></script>
+  <script src="/dev/getScreenId.js"></script>
+
+<!-- custom layout for HTML5 audio/video elements -->
+<!--<link rel="stylesheet" href="/dev/getHTMLMediaElement.css">
+<script src="/dev/getHTMLMediaElement.js"></script>
+
+<script src="/dev/FileBufferReader.js"></script>-->
+<script>
+//window.enableAdapter = true; // enable adapter.js
+
+// ......................................................
+// .......................UI Code........................
+// ......................................................
+/*document.getElementById('open-room').onclick = function() {
+    disableInputButtons();
+    connection.open(document.getElementById('room-id').value, function() {
+        showRoomURL(connection.sessionid);
+    });
+};
+
+document.getElementById('join-room').onclick = function() {
+    disableInputButtons();
+    connection.join(document.getElementById('room-id').value);
+};
+
+document.getElementById('open-or-join-room').onclick = function() {
+    disableInputButtons();
+    connection.openOrJoin(document.getElementById('room-id').value, function(isRoomExists, roomid) {
+        if (!isRoomExists) {
+            showRoomURL(roomid);
+        }
+    });
+};*/
+
+/*document.getElementById('btn-leave-room').onclick = function() {
+    this.disabled = true;
+
+    if (connection.isInitiator) {
+        // use this method if you did NOT set "autoCloseEntireSession===true"
+        // for more info: https://github.com/muaz-khan/RTCMultiConnection#closeentiresession
+        connection.closeEntireSession(function() {
+            console.log('Entire session has been closed.');
+        });
+    } else {
+        connection.leave();
+    }
+};*/
+
+// ......................................................
+// ................FileSharing/TextChat Code.............
+// ......................................................
+
+document.getElementById('share-file').onclick = function() {
+    var fileSelector = new FileSelector();
+    fileSelector.selectSingleFile(function(file) {
+        connection.send(file);
+    });
+};
+
+document.getElementById('input-text-chat').onkeyup = function(e) {
+    if (e.keyCode != 13) return;
+
+    // removing trailing/leading whitespace
+    this.value = this.value.replace(/^\s+|\s+$/g, '');
+    if (!this.value.length) return;
+
+    connection.send(this.value);
+    appendDIV(this.value);
+    this.value = '';
+};
+
+var chatContainer = document.querySelector('.chat-output');
+
+var btnShareScreen = document.getElementById("btnShareScreen");
+btnShareScreen.onclick = function() {
+    shareScreen();
+};
+function shareScreen(){
+    isSharing=true;
+    connection.addStream({
+        screen: true,
+        oneway: true
+    });
+}
+
+function appendDIV(event) {
+    var div = document.createElement('div');
+    div.innerHTML = event.data || event;
+    //chatContainer.insertBefore(div, chatContainer.firstChild);
+    chatContainer.append(div);
+    div.tabIndex = 0;
+    div.focus();
+
+    document.getElementById('input-text-chat').focus();
+}
+
+function showLocalVideo(event) {
+    event.mediaElement.removeAttribute('src');
+    event.mediaElement.removeAttribute('srcObject');
+
+    var videoDiv = document.createElement('div');
+    var video = document.createElement('video');
+    video.controls = false;
+    video.muted = true;
+    video.srcObject = event.stream;
+    video.autoplay = true;
+    videoDiv.id=event.streamid;
+    videoDiv.className="localVideo";
+
+
+    if(event.stream.isScreen){
+        video.style.cssText="object-fit:contain; background-color: grey;";
+    }
+
+    videoDiv.appendChild(video);
+    connection.localVideoContainer.appendChild(videoDiv);
+
+    $(videoDiv).click(function(){
+        console.log(videoDiv.id);
+        var originalFullScreenVideo =$(connection.mainScreen).find("div");
+        if(originalFullScreenVideo.length){
+            if (originalFullScreenVideo[0].className == "remoteVideo"){
+                $(connection.remoteVideoContainer).prepend(originalFullScreenVideo);
+            }else if (originalFullScreenVideo[0].className == "localVideo"){
+                $(connection.localVideoContainer).prepend(originalFullScreenVideo);
+            }
+            originalFullScreenVideo.find("video")[0].play();
+        }
+        $(connection.mainScreen).append($(this));
+        this.getElementsByTagName("video")[0].play();
+    });
+
+    return videoDiv;
+    /*setTimeout(function() {
+        video.play();
+    }, 2000);*/
+
+}
+
+
+function showRemoteVideo(event){
+    console.log(event);
+
+    event.mediaElement.removeAttribute('src');
+    event.mediaElement.removeAttribute('srcObject');
+
+    var video = document.createElement('video');
+
+    if(event.stream.isScreen){
+        video.style.cssText="object-fit:contain; background-color: black;";
+    }
+    video.srcObject = event.stream;
+    video.autoplay = true;
+
+    var videoDiv =  document.createElement("div");
+    videoDiv.className = "remoteVideo";
+
+    $(videoDiv).click(function(){
+        console.log(videoDiv.id);
+        var originalFullScreenVideo =$(connection.mainScreen).find("div");
+        if (originalFullScreenVideo.length){
+            if (originalFullScreenVideo[0].className == "remoteVideo"){
+                $(connection.remoteVideoContainer).prepend(originalFullScreenVideo);
+            }else if (originalFullScreenVideo[0].className == "localVideo"){
+                $(connection.localVideoContainer).prepend(originalFullScreenVideo);
+            }
+            originalFullScreenVideo.find("video")[0].play();
+        }
+        $(connection.mainScreen).append($(this));
+        this.getElementsByTagName("video")[0].play();
+    });
+
+    videoDiv.appendChild(video);
+
+    connection.remoteVideoContainer.appendChild(videoDiv);
+    videoDiv.id=event.streamid;
+    return videoDiv;
+}
+
+var listOfRecorders = {};
+var btnRecording = document.getElementById("btnRecording");
+btnRecording.onclick = function() {
+    if($(this).hasClass("fa-play-circle")){
+        startRecord();
+    }else{
+        stopRecord();
+    }
+    $(this).toggleClass("fa-play-circle");
+    $(this).toggleClass("fa-stop-circle");
+};
+
+
+function stopRecord(){
+    var streamIds=[];
+    for(var streamId in listOfRecorders){
+        streamIds.push(streamId);
+    }
+    popRecordedStream(streamIds);
+    /*
+    var streamid = prompt('Enter stream-id');
+
+    if(!listOfRecorders[streamid]) throw 'Wrong stream-id';
+
+    var recorder = listOfRecorders[streamid];
+    recorder.stopRecording(function() {
+        var blob = recorder.getBlob();
+
+        window.open( URL.createObjectURL(blob) );
+
+        /!*!// or upload to server
+        var formData = new FormData();
+        formData.append('file', blob);
+        $.post('/server-address', formData, serverCallback);*!/
+    });*/
+}
+function popRecordedStream(streamIds){
+    if(streamIds.length){
+        var downloadStreamid=streamIds.pop();
+        var recorder = listOfRecorders[downloadStreamid];
+        recorder.stopRecording(function() {
+            var blob = recorder.getBlob();
+            downloadLink.href=URL.createObjectURL(blob);
+            downloadLink.download=downloadStreamid;
+            downloadLink.click();
+            //window.open( URL.createObjectURL(blob) );
+            popRecordedStream(streamIds);
+        });
+    }
+}
+
+
+var downloadLink=document.getElementById("downloadLink");
+function startRecord(){
+    for(var streamId in listOfRecorders){
+        listOfRecorders[streamId].startRecording();
+    }
+}
+
+var isSharing=false;
+// ......................................................
+// ..................RTCMultiConnection Code.............
+// ......................................................
+var numberOfRemoteStreams=0;
+var connection = new RTCMultiConnection();
+
+// Using getScreenId.js to capture screen from any domain
+// You do NOT need to deploy Chrome Extension YOUR-Self!!
+connection.getScreenConstraints = function(callback) {
+    getScreenConstraints(function(error, screen_constraints) {
+        if (!error) {
+            screen_constraints = connection.modifyScreenConstraints(screen_constraints);
+            callback(error, screen_constraints);
+            return;
+        }
+        if (error == "PermissionDeniedError"){
+            if(roomid==connection.userid){
+                connection.open(roomid);
+            }else{
+                connection.join(roomid);
+            }
+            console.log("User select not sharing screen");
+        }else{
+            $("#chrome-extension-install-warning-container").dialog("open");
+        }
+        //throw error;
+    });
+};
+
+//Set up ice server
+var iceServers = [
+    {'urls': 'turn:172.16.0.6:3478', username: 'admin', credential: 'chcgp123'},
+    {'urls': 'turn:121.43.178.189:3478', username: 'admin', credential: 'chcgp123'},/*
+    {'urls': 'turn:10.0.0.8:3478', username: 'admin', credential: 'chcgp123'},
+    {'urls': 'turn:47.88.51.19:3478', username: 'admin', credential: 'chcgp123'}*/
+];
+
+connection.iceServers = iceServers;
+
+function onDetectRTCLoaded() {
+    document.querySelector('#audioSelect').innerHTML="";
+    document.querySelector('#videoSelect').innerHTML="";
+    connection.DetectRTC.audioInputDevices.forEach(function (device) {
+        var option = document.createElement('option');
+
+        // this is what people see
+        option.innerHTML = device.label;
+
+        // but this is what inernally used to select relevant device
+        option.value = device.id;
+
+        // append to your choice
+        document.querySelector('#audioSelect').appendChild(option);
+    });
+    var defaultAudio = Cookies.get("defaultAudio");
+    if (defaultAudio == undefined || $("#audioSelect option[value='" + defaultAudio + "']").length == 0) {
+        defaultAudio = document.querySelector('#audioSelect').value;
+        Cookies.set("defaultAudio", defaultAudio);
+    } else {
+        document.querySelector('#audioSelect').value = defaultAudio;
+    }
+    connection.mediaConstraints.video.optional = [{
+        sourceId: defaultAudio
+    }];
+
+    // you can access all cameras using "DetectRTC.videoInputDevices"
+    connection.DetectRTC.videoInputDevices.forEach(function (device) {
+        var option = document.createElement('option');
+
+        // this is what people see
+        option.innerHTML = device.label;
+
+        // but this is what inernally used to select relevant device
+        option.value = device.id;
+
+        // append to your choice
+        document.querySelector('#videoSelect').appendChild(option);
+    });
+
+    var defaultVideo = Cookies.get("defaultVideo");
+    if (defaultVideo == undefined || $("#videoSelect option[value='" + defaultVideo + "']").length == 0) {
+        defaultVideo = document.querySelector('#videoSelect').value;
+        Cookies.set("defaultVideo", defaultVideo);
+    } else {
+        document.querySelector('#videoSelect').value = defaultVideo;
+    }
+
+    connection.mediaConstraints.video.optional = [{
+        sourceId: defaultVideo
+    }];
+}
+
+function reCheckRoomPresence() {
+    connection.checkPresence(roomid, function(isRoomExists) {
+        if (isRoomExists) {
+            connection.join(roomid);
+            return;
+        }
+        console.log("retry in 2 sec");
+
+        setTimeout(reCheckRoomPresence, 2000);
+    });
+}
+
+function reloadDetectRTC(callback) {
+    DetectRTC.load(function() {
+        onDetectRTCLoaded();
+
+        if(callback && typeof callback == 'function') {
+            callback();
+        }
+    });
+}
+
+DetectRTC.load(function() {
+    reloadDetectRTC();
+
+    try {
+        if(DetectRTC.MediaDevices[0] && DetectRTC.MediaDevices[0].label === 'Please invoke getUserMedia once.') {
+            navigator.mediaDevices.getUserMedia({audio: true, video: true}).then(function(stream) {
+                var video;
+                try {
+                    video = document.createElement('video');
+                    video.muted = true;
+                    video.volume = 0;
+                    video.src = URL.createObjectURL(stream);
+                    video.style.display = 'none';
+                    video.style.opacity = 0;
+                    (document.body || document.documentElement).appendChild(vide);
+                }
+                catch(e) {}
+
+                reloadDetectRTC(function() {
+                    // release camera
+                    stream.getVideoTracks().forEach(function(track) {
+                        track.stop();
+                    });
+
+                    stream.getAudioTracks().forEach(function(track) {
+                        track.stop();
+                    });
+
+                    if(video && video.parentNode) {
+                        video.parentNode.removeChild(video);
+                    }
+                });
+            }).catch(reloadDetectRTC);
+            return;
+        }
+    }
+    catch(e) {}
+
+    onDetectRTCLoaded();
+});
+
+
+// by default, socket.io server is assumed to be deployed on your own URL
+connection.socketURL = 'https://cnvpn.haoeyou.com:443/';
+
+// comment-out below line if you do not have your own socket.io server
+// connection.socketURL = 'https://rtcmulticonnection.herokuapp.com:443/';
+
+connection.socketMessageEvent = '远程医疗';
+
+connection.enableFileSharing = true; // by default, it is "false".
+
+connection.session = {
+    audio: true,
+    video: true,
+    data: true
+};
+
+connection.sdpConstraints.mandatory = {
+    OfferToReceiveAudio: true,
+    OfferToReceiveVideo: true
+};
+
+connection.localVideoContainer = document.getElementById('localVideoContainer');
+connection.mainScreen = document.getElementById('mainScreen');
+connection.remoteVideoContainer = document.getElementById('remoteVideoContainer');
+
+var userStreamAdded={};
+
+connection.onstream = function(event) {
+
+    userStreamAdded[event.userid]=true;
+    if(!$("#"+event.streamid).length){
+
+        var recorder = RecordRTC(event.stream, {
+            video: true, audio: true,
+            recorderType: MediaStreamRecorder
+        });
+
+        listOfRecorders[event.streamid] = recorder;
+
+        if($("#btnRecording").hasClass("fa-stop-circle")){
+            recorder.startRecording();
+        }
+
+        if (event.type == 'local') {
+            var localVideoDiv = showLocalVideo(event);
+
+            if(!$(connection.mainScreen).find("div").length){
+                localVideoDiv.click();
+            }
+
+            if(event.stream.isScreen && isSharing){
+                setTimeout(function(){
+                    connection.getAllParticipants().forEach(function(p){connection.renegotiate(p);});
+                },1000);
+                isSharing=false;
+            }
+            return;
+        }
+
+        if (event.type == 'remote') {
+            var remoteVideoDiv = showRemoteVideo(event);
+            if (!numberOfRemoteStreams) {
+                remoteVideoDiv.click();
+            }
+            numberOfRemoteStreams++;
+        }
+    }
+
+    /*
+    event.mediaElement.removeAttribute('src');
+    event.mediaElement.removeAttribute('srcObject');
+
+    var video = document.createElement('video');
+    video.controls = true;
+    if(event.type === 'local') {
+        video.muted = true;
+    }
+    video.srcObject = event.stream;
+
+    var width = parseInt(connection.videosContainer.clientWidth / 2) - 20;
+    var mediaElement = getHTMLMediaElement(video, {
+        title: event.userid,
+        buttons: ['full-screen'],
+        width: width,
+        showOnMouseEnter: false
+    });
+
+    connection.videosContainer.appendChild(mediaElement);
+
+    setTimeout(function() {
+        mediaElement.media.play();
+    }, 5000);
+
+    mediaElement.id = event.streamid;*/
+};
+
+connection.onstreamended = function(event) {
+
+    if($("#btnRecording").hasClass("fa-stop-circle")){
+        var recorder = listOfRecorders[event.streamid];
+        recorder.stopRecording(function() {
+            var blob = recorder.getBlob();
+            downloadLink.href=URL.createObjectURL(blob);
+            downloadLink.download=event.streamid;
+            downloadLink.click();
+        });
+    }
+    delete listOfRecorders[event.streamid];
+    var mediaElement = document.getElementById(event.streamid);
+
+    var parentNodeId="";
+    if (mediaElement) {
+        parentNodeId = mediaElement.parentNode.id;
+        mediaElement.parentNode.removeChild(mediaElement);
+
+        if(event.type=="remote"){
+            numberOfRemoteStreams--;
+            if(!numberOfRemoteStreams){
+                $(connection.mainScreen).append($(connection.localVideoContainer).find("div")[0]);
+                $(connection.mainScreen).find("video")[0].play();
+            }else{
+                if(parentNodeId == "mainScreen"){
+                    $(connection.mainScreen).append($(connection.remoteVideoContainer).find("div")[0]);
+                    $(connection.mainScreen).find("video")[0].play();
+                }
+            }
+        }
+    }
+};
+
+connection.onmessage = appendDIV;
+connection.filesContainer = document.getElementById('file-container');
+
+connection.onopen = function(event) {
+    document.getElementById('share-file').disabled = false;
+    document.getElementById('input-text-chat').disabled = false;
+    //document.getElementById('btn-leave-room').disabled = false;
+    if (!!connection.enableLogs) {
+        console.info('Data connection has been opened between you & ', event.userid);
+        console.log('You are connected with: ' + connection.getAllParticipants().join(', '));
+    }
+    userStreamAdded[event.userid]=false;
+    setTimeout(function(){
+          /*if($("#"+event.streamid).length == 0){
+              if (!!connection.enableLogs) {
+                console.log(event.userid+"-"+event.streamid+": DOES NOT EXIST!")
+              }
+          }else{
+              if (!!connection.enableLogs) {
+                  console.log(event.userid+"-"+event.streamid+": already exists.")
+              }
+          }*/
+          if(!userStreamAdded[event.userid]){
+              console.log(event.userid+"-"+event.streamid+": DOES NOT EXIST! Start renegotiate!");
+              connection.renegotiate(event.userid);
+          }
+    },2000);
+};
+
+connection.onclose = function(event) {
+    console.log("User "+event.userid + " disconnected");
+    if(event.userid == roomid){
+        if(!isSharing){
+            setTimeout(reCheckRoomPresence, 2000);
+        }
+    }
+};
+
+connection.onEntireSessionClosed = function(event) {
+    document.getElementById('share-file').disabled = true;
+    document.getElementById('input-text-chat').disabled = true;
+    //document.getElementById('btn-leave-room').disabled = true;
+
+    /*document.getElementById('open-or-join-room').disabled = false;
+    document.getElementById('open-room').disabled = false;
+    document.getElementById('join-room').disabled = false;
+    document.getElementById('room-id').disabled = false;*/
+
+    connection.attachStreams.forEach(function(stream) {
+        stream.stop();
+    });
+
+    // don't display alert for moderator
+    if (connection.userid === event.userid) return;
+    console.log('Entire session has been closed by the moderator: ' + event.userid);
+};
+
+connection.onUserIdAlreadyTaken = function(useridAlreadyTaken, yourNewUserId) {
+    // seems room is already opened
+    connection.join(useridAlreadyTaken);
+    console.log("onUserIdAlreadyTaken");
+};
+
+/*function disableInputButtons() {
+    document.getElementById('open-or-join-room').disabled = true;
+    document.getElementById('open-room').disabled = true;
+    document.getElementById('join-room').disabled = true;
+    document.getElementById('room-id').disabled = true;
+}*/
+
+// ......................................................
+// ......................Handling Room-ID................
+// ......................................................
+
+/*function showRoomURL(roomid) {
+    var roomHashURL = '#' + roomid;
+    var roomQueryStringURL = '?roomid=' + roomid;
+
+    var html = '<h2>Unique URL for your room:</h2><br>';
+
+    html += 'Hash URL: <a href="' + roomHashURL + '" target="_blank">' + roomHashURL + '</a>';
+    html += '<br>';
+    html += 'QueryString URL: <a href="' + roomQueryStringURL + '" target="_blank">' + roomQueryStringURL + '</a>';
+
+    var roomURLsDiv = document.getElementById('room-urls');
+    roomURLsDiv.innerHTML = html;
+
+    roomURLsDiv.style.display = 'block';
+}*/
+
+(function() {
+    var params = {},
+        r = /([^&=]+)=?([^&]*)/g;
+
+    function d(s) {
+        return decodeURIComponent(s.replace(/\+/g, ' '));
+    }
+    var match, search = window.location.search;
+    while (match = r.exec(search.substring(1)))
+        params[d(match[1])] = d(match[2]);
+    window.params = params;
+
+    window.RMCExtensionID = params.extensionid;
+    if(params.inspect){
+        connection.dontCaptureUserMedia = true;
+        $("#btnConfig").hide();
+        $("#btnShareScreen").hide();
+        $("#share-file").hide();
+    }else{
+        $("#btnRecording").hide();
+    }
+
+    if(params.colab){
+        if(params.colab=="ivds"){
+            $("#logo").attr("src","image/haoeyou-ivds-logo.png");
+        }else{
+            $("#logo").attr("src","image/haoeyou_satellite_clinics.png");
+        }
+    }else{
+        $("#logo").attr("src","image/haoeyou_satellite_clinics.png");
+    }
+
+    $( "#settings-container" ).dialog({
+        autoOpen: false,
+        width: 500,
+        show: {
+            effect: "blind",
+            duration: 200
+        }
+    });
+
+    $("#btnConfig").click(function(){
+        $( "#settings-container" ).dialog( "open" );
+    });
+
+    $( "#file-container" ).dialog({
+        autoOpen: false,
+        width: 500,
+        height: 500
+    });
+
+    $("#btnFileDownload").click(function(){
+        $( "#file-container" ).dialog( "open" );
+    });
+
+    $( "#chat-container" ).dialog({
+        autoOpen: false,
+        width: 500,
+        height: 500
+    });
+
+    $( "#chrome-extension-install-warning-container" ).dialog({autoOpen:false});
+
+    $("#btnChat").click(function(){
+        $( "#chat-container" ).dialog( "open" );
+    });
+
+
+    $("#videoSelect").change(function(){
+
+        Cookies.set("defaultVideo", this.value);
+        connection.disconnect();
+        connection.attachStreams.forEach(function(stream) {
+            stream.stop();
+        });
+        connection.mediaConstraints.video.optional = [{
+            sourceId: this.value
+        }];
+        connection.join(roomid);
+
+        /*connection.getAllParticipants().forEach(function(p) {
+            connection.attachStreams.forEach(function(stream) {
+                connection.peers[p].peer.removeStream(stream);
+            });
+        });
+
+        connection.attachStreams.forEach(function(stream) {
+            stream.stop();
+        });
+
+        connection.attachStreams = [];*/
+
+        /*connection.mediaConstraints.video.optional = [{
+            sourceId: this.value
+        }];
+
+
+        // add new camera to existing peer connections
+        connection.addStream(connection.session);*/
+        /*setTimeout(function() {
+            connection.addStream(connection.session);
+            connection.rejoin(connection.connectionDescription);
+        }, 300);*/
+    });
+
+    /*$("#localVideoContainer").click(function(){
+        if( $(this).find("div").length>1 ){
+            $(this).append($(this).find("div")[0]);
+        }
+    });*/
+
+    /*$("#audioSelect").change(function(){
+        connection.attachStreams.forEach(function(stream) {
+            stream.stop();
+        });
+
+        connection.mediaConstraints.video.optional = [{
+            sourceId: this.value
+        }];
+
+        Cookies.set("defaultVideo", this.value);
+
+        // add new camera to existing peer connections
+        setTimeout(function() {
+            connection.addStream(connection.session);
+            connection.rejoin(connection.connectionDescription);
+        }, 300);
+    });*/
+})();
+
+var roomid = '';
+if (localStorage.getItem(connection.socketMessageEvent)) {
+    roomid = localStorage.getItem(connection.socketMessageEvent);
+} else {
+    roomid = connection.token();
+}
+/*document.getElementById('room-id').value = roomid;
+document.getElementById('room-id').onkeyup = function() {
+    localStorage.setItem(connection.socketMessageEvent, this.value);
+};*/
+
+var hashString = location.hash.replace('#', '');
+if (hashString.length && hashString.indexOf('comment-') == 0) {
+    hashString = '';
+}
+
+var roomid = params.roomid;
+if (!roomid && hashString.length) {
+    roomid = hashString;
+}
+
+if (roomid && roomid.length) {
+    localStorage.setItem(connection.socketMessageEvent, roomid);
+    try{
+        connection.checkPresence(roomid, function(isRoomExists) {
+            if (isRoomExists) {
+                /*connection.connectionDescription = connection.join(roomid, function(){
+                    console.log("Join room with session id: " + connection.sessionid);
+                });*/
+                reCheckRoomPresence();
+            }else{
+                connection.open(roomid,function(){
+                  console.log("New room with session id: "+ connection.sessionid);
+                });
+            }
+        });
+    }catch(e){
+        console.log("Error to connect to "+ connection.socketURL);
+    }
+
+    // auto-join-room
+    /*(function reCheckRoomPresence() {
+        connection.checkPresence(roomid, function(isRoomExists) {
+            if (isRoomExists) {
+                connection.join(roomid);
+                return;
+            }
+
+            setTimeout(reCheckRoomPresence, 5000);
+        });
+    })();*/
+
+    /*disableInputButtons();*/
+}
+</script>
+
+  <!--<script src="https://cdn.webrtc-experiment.com/common.js"></script>-->
+</body>
+</html>
