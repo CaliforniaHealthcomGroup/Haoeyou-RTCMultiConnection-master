@@ -16,7 +16,7 @@
   <style type="text/css">
     body {margin: 0; position: fixed; width: 100%; height: 100%; background-color: black;}
     #navigationContainer {position: fixed; width: 100%; height: 60px; top: 0; left: 0; right: 0; background-color: transparent; z-index: 999}
-    #navigationBar {width: 95%; height: 100%; padding: 0 2.5% 0 2.5%; margin: 0; background-color: rgba(0, 0, 0, 0.67);; display: block;}
+    #navigationBar {width: 95%; height: 100%; padding: 0 2.5% 0 2.5%; margin: 0; background-color: rgba(88, 88, 88, 0.65); display: block;}
     /*#navigationContainer:hover #navigationBar{display: block;}*/
     #navigationBar input {height: 50px; float: right; padding: 5px; display: block; outline: none;}
     #navigationBar input:hover {background-color: #333;}
@@ -34,142 +34,6 @@
     #remoteVideoContainer div {position: relative; overflow:hidden; float:left; width: 28vh; height: 21vh;}
     #remoteVideoContainer div video {width: 100%; height: 100%; object-fit: cover;}
     .dialog-container {height:350px; overflow:auto}
-    
-    #btnShareScreen {
-        background: url(../image/share.svg) no-repeat;
-        width: 45px;
-        height: 45px;
-        background-size: contain;
-    }
-    #btnChat {
-        background: url(../image/chat.svg) no-repeat;
-        width: 45px;
-        height: 45px;
-        background-size: contain;
-    }
-    #btnFileDownload {
-        background: url(../image/upload.svg) no-repeat;
-        width: 45px;
-        height: 45px;
-        background-size: contain;
-    }
-    #btnConfig {
-      background: url(../image/settings.svg) no-repeat;
-      width: 40px;
-      height: 40px;
-      background-size: contain;
-    }
-    .play{
-      background: url(../image/play.svg) no-repeat;
-      width: 40px;
-      height: 40px;
-      background-size: contain;
-    }
-    .stop{
-      background: url(../image/stop.svg) no-repeat;
-      width: 40px;
-      height: 40px;
-      background-size: contain;
-    }
-    #btnShareScreen:hover, #btnChat:hover, #btnFileDownload:hover, #btnConfig:hover {
-        opacity:0.7;
-		transition: all ease-in 0.5s;
-    }
-    .ui-widget {
-        font-family: Montserrat,Helvetica,sans-serif;
-        letter-spacing: 0.5px;
-    	line-height: 1.3;
-    	border: none;
-    	padding: 0;
-    }
-    .ui-widget-header {
-        border: none;
-        background: #097fb8;
-        color: #fff;
-        font-size: 1.3em;
-        letter-spacing: 1.2px;
-        border-bottom-right-radius: 0px;
-        border-bottom-left-radius: 0px;
-    }
-    .ui-widget.ui-widget-content {
-        border: none !important;
-    }
-    .ui-widget input, .ui-widget select, .ui-widget textarea, .ui-widget button {
-        font-family: Montserrat,Helvetica,sans-serif;
-    }
-    .ui-button .ui-icon {
-        background: url(../image/close.svg)  no-repeat !important;
-        width: 45px;
-        height: 45px;
-        background-size: contain;
-    }
-    .ui-dialog .ui-dialog-titlebar-close {
-        background-image: url(image/close.svg);
-    	background-color: rgba(169, 72, 72, 0);
-    	background-repeat: no-repeat;
-    	background-size: contain;
-    	border: 0 !important;
-    	right: 0.7em !important;
-    }
-	.ui-dialog .ui-dialog-titlebar-close:hover{
-		border:0 !important;
-		opacity:0.7;
-		transition: all ease-in 0.5s;
-	}
-    #settings-container {
-        padding-top: 25px !important;
-        padding-bottom: 25px !important;
-    }
-    #file-container {
-        padding-top: 25px;
-        padding-bottom: 25px;
-        height: 100% !important;
-    }
-    #share-file {
-        border: 2px solid #a0a0a0;
-		padding: 5px 20px;
-		padding-left: 35px;
-		cursor: pointer;
-		position: relative;
-		color: #383838;
-		border-radius: 3px;
-    }
-	#share-file:hover{
-		opacity:0.7;
-		transition: all ease-in 0.5s;
-	}
-     #share-file i.fa{
-		background-image: url(image/upload-black.svg);
-		background-size: contain;
-		background-repeat: no-repeat;
-		height: 20px;
-		width: 20px;
-		position: absolute;
-		left: 10px;
-		top: 4px;
-	 }
-	 #share-file i.fa:before{
-		 display:none;
-	 }
-	 :focus {
-        outline: -webkit-focus-ring-color auto 0px !important;
-     }
-     #chat-container {
-        padding-top: 20px !important;
-     }
-     #input-text-chat {
-        padding: 3px 10px;
-        color: #383838;
-        border: 2px solid #a0a0a0;
-        border-radius: 3px;
-     }
-     #audioSelect, #videoSelect {
-        padding: 3px 10px;
-        color: #383838;
-        border: 2px solid #a0a0a0;
-        border-radius: 3px;
-     }
-     
   </style>
 </head>
 <body>
@@ -187,11 +51,11 @@
   <div id="navigationContainer">
     <div id="navigationBar">
       <img id="logo" >
-      <i id="btnConfig"></i>
-      <i id="btnRecording" class="play"></i>
-      <i id="btnFileDownload"></i>
-      <i id="btnChat"></i>
-      <i id="btnShareScreen"></i>
+      <i class="fa fa-cog" id="btnConfig"></i>
+      <i class="fa fa-play-circle" id="btnRecording"></i>
+      <i class="fa fa-cloud" id="btnFileDownload"></i>
+      <i class="fa fa-snapchat" id="btnChat"></i>
+      <i class="fa fa-share-square-o" id="btnShareScreen"></i>
     </div>
   </div>
 
@@ -199,25 +63,25 @@
 
   <div id="settings-container" class="dialog-container" title="Settings">
     <label style="width: 150px;">Microphone</label>:<br>
-    <select id="audioSelect" style="width: 100%; margin-bottom: 25px; margin-top:5px;"></select>
+    <select id="audioSelect" style="width: 100%"></select>
     <label style="width: 150px;">Camera</label>:<br>
-    <select id="videoSelect" style="width: 100%; margin-top:5px;"></select>
+    <select id="videoSelect" style="width: 100%"></select>
   </div>
 
 
   <div id="chat-container" class="dialog-container" title="Chat">
     <div class="chat-output"></div>
-    <input id="input-text-chat" placeholder="Enter Text" disabled>
+    <input id="input-text-chat" placeholder="Enter Text Chat" disabled>
   </div>
 
-  <div id="file-container" class="dialog-container" title="File Share">
-    <button id="share-file"><i class="fa fa-cloud-upload"></i> Select File</button>
+  <div id="file-container" class="dialog-container" title="File">
+    <button id="share-file"><i class="fa fa-cloud-upload"></i> Select File To Share</button>
   </div>
 
-  <div id="chrome-extension-install-warning-container" class="dialog-container" title="Extension Needed">
-    <p>Please click <a href="https://chrome.google.com/webstore/detail/screen-capturing/ajhifddimkapgcifgcodmmfdlknahffk">here</a> to install the Chrome Extension to share your screen.</p>
+  <div id="chrome-extension-install-warning-container" class="dialog-container" title="Chrome Extension">
+    <p>Please click <a href="https://chrome.google.com/webstore/detail/screen-capturing/ajhifddimkapgcifgcodmmfdlknahffk">here</a> to install Chrome Extension for screen share.</p>
     <p>Or</p>
-    <p><a href="extension/remoteScreenShare.zip">Download</a> the extension and manually install it into your Chrome browser.</p>
+    <p><a href="extension/remoteScreenShare.zip">Download</a> extension. Install into your Chrome manually through developer mode.</p>
   </div>
 
 <script src="/dist/RTCMultiConnection.js"></script>
@@ -406,13 +270,13 @@ function showRemoteVideo(event){
 var listOfRecorders = {};
 var btnRecording = document.getElementById("btnRecording");
 btnRecording.onclick = function() {
-    if($(this).hasClass("play")){
+    if($(this).hasClass("fa-play-circle")){
         startRecord();
     }else{
         stopRecord();
     }
-    $(this).toggleClass("stop");
-    $(this).toggleClass("play");
+    $(this).toggleClass("fa-play-circle");
+    $(this).toggleClass("fa-stop-circle");
 };
 
 
@@ -658,7 +522,7 @@ connection.onstream = function(event) {
 
         listOfRecorders[event.streamid] = recorder;
 
-        if($("#btnRecording").hasClass("play")){
+        if($("#btnRecording").hasClass("fa-stop-circle")){
             recorder.startRecording();
         }
 
@@ -717,7 +581,7 @@ connection.onstream = function(event) {
 
 connection.onstreamended = function(event) {
 
-    if($("#btnRecording").hasClass("stop")){
+    if($("#btnRecording").hasClass("fa-stop-circle")){
         var recorder = listOfRecorders[event.streamid];
         recorder.stopRecording(function() {
             var blob = recorder.getBlob();
